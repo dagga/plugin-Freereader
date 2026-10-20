@@ -41,6 +41,7 @@ public class ImageFetcher
 	
 	private static final Pattern IMG_TAG = Pattern.compile("<img\\b[^>]*>", Pattern.CASE_INSENSITIVE);
 	private static final Pattern SRC_ATTR = Pattern.compile("\\ssrc\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s>]+))", Pattern.CASE_INSENSITIVE);
+	private static final Pattern SRCSET_ATTR = Pattern.compile("\\s(?:srcset|sizes)\\s*=\\s*(?:\"[^\"]*\"|'[^']*'|[^\\s>]+)", Pattern.CASE_INSENSITIVE);
 
 	/**
 	 * Filename -> bucket of every downloaded image.
@@ -87,6 +88,10 @@ public class ImageFetcher
 			if(src.find()) {
 				String url = src.group(1) != null ? src.group(1) : src.group(2) != null ? src.group(2) : src.group(3);
 				String file = fetch(resolve(base, url.trim().replace("&amp;", "&")));
+				if(file != null) {
+					replacement = tag.substring(0, src.start()) + " src=\"" + IMAGE_DIR + "/" + file + "\"" + tag.substring(src.end());
+					replacement = SRCSET_ATTR.matcher(replacement).replaceAll("");
+				}
 			}
 			tags.appendReplacement(out, Matcher.quoteReplacement(replacement));
 		}

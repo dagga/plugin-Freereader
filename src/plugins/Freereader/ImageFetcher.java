@@ -24,6 +24,7 @@ import freenet.support.io.ArrayBucket;
  * ImageFetcher
  * Downloads the images referenced in feed entries so they can be inserted
  * along with the freesite, and rewrites the entries to use the local copies.
+ * Images that can't be fetched are removed, as Freenet would block them anyway.
  *
  * @author nicolas
  */
@@ -83,7 +84,7 @@ public class ImageFetcher
 		StringBuffer out = new StringBuffer();
 		while(tags.find()) {
 			String tag = tags.group();
-			String replacement = tag;
+			String replacement = "";
 			Matcher src = SRC_ATTR.matcher(tag);
 			if(src.find()) {
 				String url = src.group(1) != null ? src.group(1) : src.group(2) != null ? src.group(2) : src.group(3);

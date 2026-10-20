@@ -6,6 +6,8 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -16,6 +18,7 @@ import com.sun.syndication.feed.synd.SyndEntry;
 import com.sun.syndication.feed.synd.SyndFeed;
 
 import freenet.support.Logger;
+import freenet.support.io.ArrayBucket;
 
 /**
  * ImageFetcher
@@ -26,6 +29,11 @@ import freenet.support.Logger;
  */
 public class ImageFetcher
 {
+	/**
+	 * Directory of the freesite where the images are stored.
+	 */
+	public static final String IMAGE_DIR = "images";
+	
 	private static final int MAX_IMAGE_SIZE = 1024 * 1024;
 	private static final int CONNECT_TIMEOUT = 15 * 1000;
 	private static final int READ_TIMEOUT = 30 * 1000;
@@ -35,9 +43,19 @@ public class ImageFetcher
 	private static final Pattern SRC_ATTR = Pattern.compile("\\ssrc\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s>]+))", Pattern.CASE_INSENSITIVE);
 
 	/**
+	 * Filename -> bucket of every downloaded image.
+	 */
+	private final HashMap<String, Object> images = new HashMap<String, Object>();
+	
+	/**
 	 * URL -> filename, or null if the image couldn't be fetched.
 	 */
 	private final HashMap<String, String> fetched = new HashMap<String, String>();
+	
+	public HashMap<String, Object> getImages()
+	{
+		return images;
+	}
 
 	@SuppressWarnings("unchecked")
 	public void processFeed(SyndFeed feed)
@@ -98,7 +116,7 @@ public class ImageFetcher
 
 		String file = null;
 		try {
-			byte[] data = download(url);
+			file = download(url);
 		}
 		catch(IOException e) {
 			Logger.normal(this, "Couldn't fetch image " + url + ": " + e.getMessage());
@@ -107,7 +125,7 @@ public class ImageFetcher
 		return file;
 	}
 	
-	private byte[] download(String address) throws IOException
+	private String download(String address) throws IOException
 	{
 		URL url = new URL(address);
 		HttpURLConnection connection;
@@ -142,7 +160,10 @@ public class ImageFetcher
 			if(extension == null)
 				throw new IOException("not a JPEG, PNG, GIF, BMP or WebP image");
 			
-			return data;
+			// name the file after its content, so an unchanged image keeps the same key
+			String file = hash(data) + extension;
+			images.put(file, new ArrayBucket(data));
+			return file;
 		}
 		finally {
 			connection.disconnect();
@@ -183,5 +204,19 @@ public class ImageFetcher
 		if(d.length >= 2 && d[0] == 'B' && d[1] == 'M')
 			return ".bmp";
 		return null;
+	}
+	
+	private static String hash(byte[] data)
+	{
+		try {
+			byte[] digest = MessageDigest.getInstance("SHA-256").digest(data);
+			StringBuilder hex = new StringBuilder();
+			for(int i = 0; i < 16; ++i)
+				hex.append(String.format("%02x", digest[i]));
+			return hex.toString();
+		}
+		catch(NoSuchAlgorithmException e) {
+			throw new RuntimeException(e);
+		}
 	}
 }

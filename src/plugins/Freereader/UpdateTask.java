@@ -112,6 +112,8 @@ public class UpdateTask extends TimerTask
 		// open XSL stylesheet
 		URL stylesheetUrl = getClass().getResource(themeDir + "/theme.xsl");
 		HashMap<String, Object> site = new HashMap<String, Object>();
+		if(!imageFetcher.getImages().isEmpty())
+			site.put(ImageFetcher.IMAGE_DIR, imageFetcher.getImages());
 		try {
 			Source stylesheetSource = new StreamSource(new XmlReader(stylesheetUrl));
 			TransformerFactory transFact = TransformerFactory.newInstance();

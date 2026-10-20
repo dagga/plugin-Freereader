@@ -1,5 +1,9 @@
 package plugins.Freereader;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
@@ -11,6 +15,8 @@ import com.sun.syndication.feed.synd.SyndContent;
 import com.sun.syndication.feed.synd.SyndEntry;
 import com.sun.syndication.feed.synd.SyndFeed;
 
+import freenet.support.Logger;
+
 /**
  * ImageFetcher
  * Downloads the images referenced in feed entries so they can be inserted
@@ -20,6 +26,11 @@ import com.sun.syndication.feed.synd.SyndFeed;
  */
 public class ImageFetcher
 {
+	private static final int MAX_IMAGE_SIZE = 1024 * 1024;
+	private static final int CONNECT_TIMEOUT = 15 * 1000;
+	private static final int READ_TIMEOUT = 30 * 1000;
+	private static final int MAX_REDIRECTS = 5;
+	
 	private static final Pattern IMG_TAG = Pattern.compile("<img\\b[^>]*>", Pattern.CASE_INSENSITIVE);
 	private static final Pattern SRC_ATTR = Pattern.compile("\\ssrc\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s>]+))", Pattern.CASE_INSENSITIVE);
 
@@ -86,7 +97,68 @@ public class ImageFetcher
 			return fetched.get(url);
 
 		String file = null;
+		try {
+			byte[] data = download(url);
+		}
+		catch(IOException e) {
+			Logger.normal(this, "Couldn't fetch image " + url + ": " + e.getMessage());
+		}
 		fetched.put(url, file);
 		return file;
+	}
+	
+	private byte[] download(String address) throws IOException
+	{
+		URL url = new URL(address);
+		HttpURLConnection connection;
+		for(int redirects = 0; ; ++redirects) {
+			if(!url.getProtocol().equals("http") && !url.getProtocol().equals("https"))
+				throw new IOException("unsupported protocol");
+			
+			connection = (HttpURLConnection)url.openConnection();
+			connection.setConnectTimeout(CONNECT_TIMEOUT);
+			connection.setReadTimeout(READ_TIMEOUT);
+			// redirects are followed by hand, as HttpURLConnection doesn't follow http -> https
+			connection.setInstanceFollowRedirects(false);
+			
+			int code = connection.getResponseCode();
+			String location = connection.getHeaderField("Location");
+			if(code < 300 || code >= 400 || location == null)
+				break;
+			connection.disconnect();
+			if(redirects == MAX_REDIRECTS)
+				throw new IOException("too many redirects");
+			url = new URL(url, location);
+		}
+		
+		try {
+			if(connection.getResponseCode() != HttpURLConnection.HTTP_OK)
+				throw new IOException("HTTP " + connection.getResponseCode());
+			if(connection.getContentLength() > MAX_IMAGE_SIZE)
+				throw new IOException("image too big");
+			
+			return read(connection.getInputStream());
+		}
+		finally {
+			connection.disconnect();
+		}
+	}
+	
+	private static byte[] read(InputStream in) throws IOException
+	{
+		try {
+			ByteArrayOutputStream out = new ByteArrayOutputStream();
+			byte[] buffer = new byte[8192];
+			int n;
+			while((n = in.read(buffer)) != -1) {
+				out.write(buffer, 0, n);
+				if(out.size() > MAX_IMAGE_SIZE)
+					throw new IOException("image too big");
+			}
+			return out.toByteArray();
+		}
+		finally {
+			in.close();
+		}
 	}
 }

@@ -5,8 +5,8 @@
 	<property name="build.lib" value="build" />
 	<property name="java.dir" value="." />
 	<property name="name" value="Freereader" />
-	<property name="freenet-cvs-snapshot.location" location="../fred/dist/freenet.jar"/>
-	<property name="freenet-ext.location" location="../fred/lib/freenet/freenet-ext.jar"/>
+	<property name="freenet-cvs-snapshot.location" location="../fred/build/libs/freenet.jar"/>
+	<property name="freenet-ext.location" location="lib/freenet-ext-29.jar"/>
 	<property name="JDOM.location" location="lib/jdom.jar"/>
 	<property name="JarJar.location" location="lib/jarjar-1.0.jar"/>
 	<property name="Jaxen.location" location="lib/jaxen-1.1.1.jar"/>
@@ -49,7 +49,7 @@
 		<replace file="${build.classes}/${version.src}">
 			<replacefilter token="@custom@" value="${git.revision}"/>
 		</replace>
-		<javac srcdir="${build.classes}" includes="${version.src}" destdir="${build.classes}" debug="on" optimize="on" source="1.6" />
+		<javac srcdir="${build.classes}" includes="${version.src}" destdir="${build.classes}" debug="on" optimize="on" release="8" includeantruntime="false" />
 		<echo message="Updated build version to ${git.revision} in ${build.classes}/${version.src}"/>
 	</target>
 
@@ -59,8 +59,8 @@
 			destdir="${build.classes}"
 			optimize="true"
 			debug="true"
-			source="1.6" 
-			target="1.6">
+			release="8"
+			includeantruntime="false">
 			<classpath>
 				<pathelement location="${freenet-ext.location}"/>
 				<pathelement location="${freenet-cvs-snapshot.location}"/>
@@ -105,6 +105,7 @@
                 <mkdir dir="lib/"/>
                 <mkdir dir="${tmp}"/>
 		<mkdir dir="dist"/>
+                <ant target="Freenet-ext-get"/>
                 <ant target="JDOM-get"/>
 		<ant target="JarJar-get"/>
 		<ant target="Jaxen-get" />
@@ -112,15 +113,30 @@
                 <delete dir="${tmp}"/>
         </target>
 
-	<property name="JDOM.mirror" value="http://www.jdom.org/dist/binary/archive/jdom-1.1.1.zip" />
-	<property name="JDOM.md5" value="4ea82cf93603d0b22e06df4ff6e8d94e" />
-	<property name="JDOM.sha1" value="e887ce82ccc1f03991b48ba8a190b2d42b2129da" />
+	<property name="Freenet-ext.mirror" value="https://mvn.freenetproject.org/org/freenetproject/freenet-ext/29/freenet-ext-29.jar" />
+	<property name="Freenet-ext.sha256" value="32f2b3d6beedf54137ea2f9a3ebef67666d769f0966b08cd17fd7db59ba4d79f" />
+	<available property="Freenet-ext.exist" file="${freenet-ext.location}" />
+	<target name="Freenet-ext-get" unless="Freenet-ext.exist">
+		<get verbose="true" src="${Freenet-ext.mirror}" dest="${tmp}/freenet-ext-29.jar" />
+		<checksum file="${tmp}/freenet-ext-29.jar" algorithm="SHA-256" property="${Freenet-ext.sha256}" verifyProperty="FreenetExtSHA256ok" />
+		<fail message="freenet-ext-29.jar checksum mismatch">
+			<condition>
+				<equals arg1="${FreenetExtSHA256ok}" arg2="false" />
+			</condition>
+		</fail>
+		<copy file="${tmp}/freenet-ext-29.jar" tofile="${freenet-ext.location}" />
+		<delete file="${tmp}/freenet-ext-29.jar"/>
+	</target>
+
+	<property name="JDOM.mirror" value="https://repo1.maven.org/maven2/org/jdom/jdom/1.1.3/jdom-1.1.3.jar" />
+	<property name="JDOM.md5" value="140bfed13341fe2039eee0f26a16d705" />
+	<property name="JDOM.sha1" value="8bdfeb39fa929c35f5e4f0b02d34350db39a1efc" />
 	<available property="JDOM.exist" classname="org.jdom.Document" classpath="${JDOM.location}" />
 	<target name="JDOM-get" unless="JDOM.exist">
-		<get verbose="true" src="${JDOM.mirror}" dest="${tmp}/JDOM-1.1.1.zip" />
-		<checksum file="${tmp}/JDOM-1.1.1.zip" algorithm="MD5" property="${JDOM.md5}" verifyProperty="JDOMMD5ok" />
-		<checksum file="${tmp}/JDOM-1.1.1.zip" algorithm="SHA1" property="${JDOM.sha1}" verifyProperty="JDOMSHA1ok" />
-		<fail message="JDOM-1.1.1.zip checksum mismatch">
+		<get verbose="true" src="${JDOM.mirror}" dest="${tmp}/jdom-1.1.3.jar" />
+		<checksum file="${tmp}/jdom-1.1.3.jar" algorithm="MD5" property="${JDOM.md5}" verifyProperty="JDOMMD5ok" />
+		<checksum file="${tmp}/jdom-1.1.3.jar" algorithm="SHA1" property="${JDOM.sha1}" verifyProperty="JDOMSHA1ok" />
+		<fail message="jdom-1.1.3.jar checksum mismatch">
 			<condition>
 				<or>
 					<equals arg1="${JDOMMD5ok}" arg2="false" />
@@ -128,15 +144,11 @@
 				</or>
 			</condition>
 		</fail>
-		<unzip src="${tmp}/JDOM-1.1.1.zip" dest="lib/">
-			<patternset>
-				<include name="**/jdom.jar" />
-			</patternset>
-			<mapper type="flatten"/>
-		</unzip>
+		<copy file="${tmp}/jdom-1.1.3.jar" tofile="${JDOM.location}" />
+		<delete file="${tmp}/jdom-1.1.3.jar"/>
 	</target>
 
-	<property name="JarJar.mirror" value="http://jarjar.googlecode.com/files/jarjar-1.0.jar" />
+	<property name="JarJar.mirror" value="https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/jarjar/jarjar-1.0.jar" />
 	<property name="JarJar.md5" value="2e2a08efcd4c55b0228fa0dac6d13e43" />
 	<property name="JarJar.sha1" value="1d6624ccf3eca99bdbbb8c2445c1a8e70076588b" />
 	<available property="JarJar.exist" classname="com.tonicsystems.jarjar.Main" classpath="${JarJar.location}" />
@@ -156,15 +168,15 @@
 		<delete file="${tmp}/jarjar-1.0.jar"/>
 	</target>
 
-	<property name="Jaxen.mirror" value="http://web.archive.org/web/20150506002151/http://dist.codehaus.org/jaxen/distributions/jaxen-1.1.1.zip" />
-	<property name="Jaxen.md5" value="d941dc9e4c6fe6667e67562699b356f4" />
-	<property name="Jaxen.sha1" value="316c96ae2ebca5ea71ecf08274e612b1868121c3" />
+	<property name="Jaxen.mirror" value="https://repo1.maven.org/maven2/jaxen/jaxen/1.1.1/jaxen-1.1.1.jar" />
+	<property name="Jaxen.md5" value="261d1aa59865842ecc32b3848b0c6538" />
+	<property name="Jaxen.sha1" value="9f5d3c5974dbe5cf69c2c2ec7d8a4eb6e0fce7f9" />
 	<available property="Jaxen.exist" classname="org.jaxen.Context" classpath="${Jaxen.location}" />
 	<target name="Jaxen-get" unless="Jaxen.exist">
-		<get verbose="true" src="${Jaxen.mirror}" dest="${tmp}/jaxen-1.1.1.zip" />
-		<checksum file="${tmp}/jaxen-1.1.1.zip" algorithm="MD5" property="${Jaxen.md5}" verifyProperty="JaxenMD5ok" />
-		<checksum file="${tmp}/jaxen-1.1.1.zip" algorithm="SHA1" property="${Jaxen.sha1}" verifyProperty="JaxenSHA1ok" />
-		<fail message="jaxen-1.1.1.zip checksum mismatch">
+		<get verbose="true" src="${Jaxen.mirror}" dest="${tmp}/jaxen-1.1.1.jar" />
+		<checksum file="${tmp}/jaxen-1.1.1.jar" algorithm="MD5" property="${Jaxen.md5}" verifyProperty="JaxenMD5ok" />
+		<checksum file="${tmp}/jaxen-1.1.1.jar" algorithm="SHA1" property="${Jaxen.sha1}" verifyProperty="JaxenSHA1ok" />
+		<fail message="jaxen-1.1.1.jar checksum mismatch">
 			<condition>
 				<or>
 					<equals arg1="${JaxenMD5ok}" arg2="false" />
@@ -172,17 +184,13 @@
 				</or>
 			</condition>
 		</fail>
-		<unzip src="${tmp}/jaxen-1.1.1.zip" dest="lib/">
-			<patternset>
-				<include name="**/jaxen-1.1.1.jar" />
-			</patternset>
-			<mapper type="flatten"/>
-		</unzip>
+		<copy file="${tmp}/jaxen-1.1.1.jar" tofile="${Jaxen.location}" />
+		<delete file="${tmp}/jaxen-1.1.1.jar"/>
 	</target>
 
-	<property name="ROME.mirror" value="https://rometools.jira.com/wiki/download/attachments/1998914/rome-1.0.jar?api=v2" />
-	<property name="ROME.md5" value="de11767f8b3ec4947070d9c05c733dac" />
-	<property name="ROME.sha1" value="681104ed3e525037272533218185afbea3e40d04" />
+	<property name="ROME.mirror" value="https://repo1.maven.org/maven2/rome/rome/1.0/rome-1.0.jar" />
+	<property name="ROME.md5" value="53d38c030287b939f4e6d745ba1269a7" />
+	<property name="ROME.sha1" value="022b33347f315833e9348cec2751af1a5d5656e4" />
 	<available property="ROME.exist" classname="com.sun.syndication.feed.atom.Content" classpath="${ROME.location}" />
 	<target name="ROME-get" unless="ROME.exist">
 		<get verbose="true" src="${ROME.mirror}" dest="${tmp}/rome-1.0.jar" />

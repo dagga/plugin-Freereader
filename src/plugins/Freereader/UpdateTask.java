@@ -82,8 +82,9 @@ public class UpdateTask extends TimerTask
 		
 		String themeDir = "/themes/" + config.getTheme();
 		
-		// fetch feeds
+		// fetch feeds and the images they reference
 		List<SyndFeed> fetchedFeeds = new ArrayList<SyndFeed>();
+		ImageFetcher imageFetcher = new ImageFetcher();
 		for(Feed f : feeds.getFeeds()) {
 			try {
 				URL feedUrl = new URL(f.url);
@@ -92,6 +93,8 @@ public class UpdateTask extends TimerTask
 				
 				// convert all feeds to atom 1.0
 				feed.setFeedType("atom_1.0");
+				
+				imageFetcher.processFeed(feed);
 				
 				fetchedFeeds.add(feed);
 			}

@@ -137,7 +137,12 @@ public class ImageFetcher
 			if(connection.getContentLength() > MAX_IMAGE_SIZE)
 				throw new IOException("image too big");
 			
-			return read(connection.getInputStream());
+			byte[] data = read(connection.getInputStream());
+			String extension = extension(data);
+			if(extension == null)
+				throw new IOException("not a JPEG, PNG, GIF, BMP or WebP image");
+			
+			return data;
 		}
 		finally {
 			connection.disconnect();
@@ -160,5 +165,23 @@ public class ImageFetcher
 		finally {
 			in.close();
 		}
+	}
+	
+	/**
+	 * Detects the format from the magic bytes, limited to those the Freenet content filter accepts.
+	 */
+	private static String extension(byte[] d)
+	{
+		if(d.length >= 3 && (d[0] & 0xff) == 0xff && (d[1] & 0xff) == 0xd8 && (d[2] & 0xff) == 0xff)
+			return ".jpg";
+		if(d.length >= 8 && (d[0] & 0xff) == 0x89 && d[1] == 'P' && d[2] == 'N' && d[3] == 'G')
+			return ".png";
+		if(d.length >= 6 && d[0] == 'G' && d[1] == 'I' && d[2] == 'F' && d[3] == '8')
+			return ".gif";
+		if(d.length >= 12 && d[0] == 'R' && d[1] == 'I' && d[2] == 'F' && d[3] == 'F' && d[8] == 'W' && d[9] == 'E' && d[10] == 'B' && d[11] == 'P')
+			return ".webp";
+		if(d.length >= 2 && d[0] == 'B' && d[1] == 'M')
+			return ".bmp";
+		return null;
 	}
 }

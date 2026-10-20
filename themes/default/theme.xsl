@@ -81,7 +81,16 @@
 									</xsl:choose>
 								</xsl:otherwise>
 							</xsl:choose>	
-							<h2><xsl:value-of select="atom:title" /></h2>
+							<h2>
+								<xsl:choose>
+									<xsl:when test="atom:link[@rel='alternate']/@href">
+										<a href="{atom:link[@rel='alternate']/@href}"><xsl:value-of select="atom:title" /></a>
+									</xsl:when>
+									<xsl:otherwise>
+										<xsl:value-of select="atom:title" />
+									</xsl:otherwise>
+								</xsl:choose>
+							</h2>
 							<xsl:choose>
 								<xsl:when test="atom:author/atom:name">
 									<div class="entry-author">by <xsl:value-of select="atom:author/atom:name" /></div>
